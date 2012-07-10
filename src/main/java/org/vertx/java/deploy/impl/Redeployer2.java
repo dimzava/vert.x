@@ -53,7 +53,8 @@ public class Redeployer2 {
 
   private static final Logger log = LoggerFactory.getLogger(Redeployer2.class);
 
-  private static final long GRACE_PERIOD = 500;
+  private static final long GRACE_PERIOD = 600;
+  private static final long CHECK_PERIOD = 200;
 
   private final VerticleManager verticleManager;
   private final Map<Path, Set<Deployment>> watchedDeployments = new HashMap<>();
@@ -62,6 +63,7 @@ public class Redeployer2 {
   private final WatchService watchService;
   private final Vertx vertx;
   private final Map<Path, Long> changing = new HashMap<>();
+  private final long timerID;
 
   public Redeployer2(Vertx vertx, VerticleManager verticleManager) {
     this.verticleManager = verticleManager;
@@ -73,7 +75,7 @@ public class Redeployer2 {
     }
 
     this.vertx = vertx;
-    vertx.setPeriodic(200, new Handler<Long>() {
+    timerID = vertx.setPeriodic(CHECK_PERIOD, new Handler<Long>() {
       public void handle(Long id) {
         try {
           checkEvents();
@@ -82,6 +84,10 @@ public class Redeployer2 {
         }
       }
     });
+  }
+
+  public void close() {
+    vertx.cancelTimer(timerID);
   }
 
   public synchronized void moduleDeployed(File fmodDir, Deployment deployment) {
